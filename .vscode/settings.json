@@ -1,3 +1,7 @@
 {
-	"solidity.compileUsingRemoteVersion": "v0.8.9+commit.e5eed63a"
+	"solidity.compileUsingRemoteVersion": "v0.8.9+commit.e5eed63a",
+	"solidity.remappings": [
+		"@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol",
+		"@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol"
+	]
 }
