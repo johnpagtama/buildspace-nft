@@ -1,38 +1,84 @@
-.App {
-  text-align: center;
+a {
+	text-decoration: none;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+button {
+	margin: 10px;
+	padding: 5px;
+	font-size: 24px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+button:hover {
+	cursor: pointer;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+.nft-page {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	grid-template-rows: repeat(2, 1fr);
+	grid-template-areas:
+		'.		nft			nft			.'
+		'.		nft-mint	nft-view	.';
 }
 
-.App-link {
-  color: #61dafb;
+.tooltip {
+	position: relative;
+	display: inline-block;
+	border-bottom: 1px dotted black;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.tooltip .tooltiptext {
+	visibility: hidden;
+	width: 15rem;
+	background-color: black;
+	color: #fff;
+	text-align: center;
+	border-radius: 6px;
+	padding: 5px 0;
+
+	/* Position the tooltip */
+	position: absolute;
+	top: 3rem;
+	z-index: 1;
+}
+
+.tooltip:hover .tooltiptext {
+	visibility: visible;
+}
+
+.nft {
+	grid-area: nft;
+	justify-self: center;
+	transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+	border: 2px solid #dcdcdc;
+	border-radius: 4px;
+	margin: 1rem;
+	padding: 3rem 1rem 3rem 1rem;
+	width: 70%;
+	background-color: #fff;
+	text-align: center;
+}
+
+.nft:hover {
+	box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+}
+
+.nft-name {
+	text-transform: uppercase;
+	text-decoration: none;
+}
+
+.nft-image {
+	height: 15rem;
+	width: 100%;
+}
+
+.nft-mint {
+	grid-area: nft-mint;
+	height: 3rem;
+}
+
+.nft-view {
+	grid-area: nft-view;
+	height: 3rem;
 }

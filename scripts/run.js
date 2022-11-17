@@ -3,21 +3,17 @@ const main = async () => {
 		'MyEpicNFT'
 	);
 
-	const nftContract = await nftContractFactory.deploy(10101);
+	const nftContract = await nftContractFactory.deploy(1349);
 
 	await nftContract.deployed();
 
 	console.log('✅ Contract deployed to: ', nftContract.address);
 
-	// Call mint function
 	let txn = await nftContract.makeAnEpicNFT();
 
-	// Wait for it to be mined
-	await txn.wait();
+	let uri = await txn.wait();
 
-	txn = await nftContract.makeAnEpicNFT();
-
-	await txn.wait();
+	console.log('✅ NFT URI: ', uri);
 };
 
 const runMain = async () => {

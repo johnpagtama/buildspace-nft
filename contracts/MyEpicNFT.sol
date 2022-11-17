@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -11,7 +12,18 @@ import "hardhat/console.sol";
 
 import {Base64} from "./libraries/Base64.sol";
 
-contract MyEpicNFT is ERC721URIStorage, VRFConsumerBaseV2 {
+contract MyEpicNFT is ERC721URIStorage, VRFConsumerBaseV2, ConfirmedOwner {
+    event RequestSent(uint256 requestId, uint32 numWords);
+    event RequestFulfilled(uint256 requestId, uint256[] randomWords);
+
+    struct RequestStatus {
+        bool fulfilled; // Is request fulfilled
+        bool exists; // Does request exist
+        uint256[] randomWords;
+    }
+
+    mapping(uint256 => RequestStatus) public s_requests; // requestId mapped => RequestStatus
+
     VRFCoordinatorV2Interface COORDINATOR;
 
     // Tracks tokenIds
@@ -21,54 +33,59 @@ contract MyEpicNFT is ERC721URIStorage, VRFConsumerBaseV2 {
     // Sub ID
     uint64 s_subscriptionId;
 
-    // Rinkeby coordinator
-    address vrfCoordinator = 0x6168499c0cFfCaCD319c818142124B7A15E857ab;
+    // Past requests ID
+    uint256[] public requestIds;
+    uint256 public lastRequestId;
+
+    // Goerli coordinator
+    address vrfCoordinator = 0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D;
 
     // The gas lane to use, which specifies the maximum gas price to bump to
     bytes32 keyHash =
-        0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc;
+        0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15;
 
     uint32 callbackGasLimit = 100000;
 
-    uint16 minimumRequestConfirmations = 3;
+    uint16 requestConfirmations = 3;
 
     // Retrieve 1 random value
     uint32 numWords = 1;
 
     uint256 public s_randomWords;
 
-    uint256 public s_requestId;
-
-    address s_owner;
+    uint256 newItemId;
 
     string[] colorNames = [
         "black",
-        "red",
         "blue",
-        "yellow",
-        "purple",
         "green",
-        "orange"
+        "orange",
+        "purple",
+        "red",
+        "white",
+        "yellow"
     ];
 
     string[] colors = [
-        "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 100%'><rect width='100%' height='100%' fill='black' /></svg>",
-        "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 100%'><rect width='100%' height='100%' fill='red' /></svg",
-        "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 100%'><rect width='100%' height='100%' fill='blue' /></svg",
-        "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 100%'><rect width='100%' height='100%' fill='yellow' /></svg",
-        "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 100%'><rect width='100%' height='100%' fill='purple' /></svg",
-        "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 100%'><rect width='100%' height='100%' fill='green' /></svg",
-        "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 100%'><rect width='100%' height='100%' fill='orange' /></svg"
+        "https://ipfs.io/ipfs/Qmdv9QsZ44okLofT6Aa5RF2TAXrKRsvNn1sk7hk2bFe31u?filename=black.png",
+        "https://ipfs.io/ipfs/QmWB89r9dndX4A6kWEBNmTmRQKR62s9BweNUecRA3wHoev?filename=blue.png",
+        "https://ipfs.io/ipfs/QmQg29DyNsdW4UNxhavewDy59TW9kFEUaRGq1LQL59veXS?filename=green.png",
+        "https://ipfs.io/ipfs/QmP9KcvjdWMRKrCPzUML1sb8G4wGftz1S5Di7mLXdXoPGm?filename=orange.png",
+        "https://ipfs.io/ipfs/QmeVXUPGrJndXTaX9RA3HG34AUbrVUiCXqiG9VJgUPUjfc?filename=purple.png",
+        "https://ipfs.io/ipfs/QmX2oAgXLHzFT5PUByCvs9m1Sb4X9xXynpRGAHMzzRLrhL?filename=red.png",
+        "https://ipfs.io/ipfs/QmPvtCGugMhnbtzh4GtTdC71EhmGb1EC7rVJf7sk6hEXoM?filename=white.png",
+        "https://ipfs.io/ipfs/QmfHUQFp9St2HTaSrmqq7UaAyWqcTHyZ4PWPdLHYbf86xT?filename=yellow.png"
     ];
 
     // Pass NFT name and symbol
     constructor(uint64 subscriptionId)
         ERC721("SquareNFT", "SQUARE")
-        VRFConsumerBaseV2(vrfCoordinator)
+        VRFConsumerBaseV2(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D)
+        ConfirmedOwner(msg.sender)
     {
-        COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator);
-
-        s_owner = msg.sender;
+        COORDINATOR = VRFCoordinatorV2Interface(
+            0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D
+        );
 
         s_subscriptionId = subscriptionId;
 
@@ -76,62 +93,87 @@ contract MyEpicNFT is ERC721URIStorage, VRFConsumerBaseV2 {
     }
 
     // Assumes subscription is funded sufficiently
-    function requestRandomWords() external onlyOwner {
+    function requestRandomWords()
+        external
+        onlyOwner
+        returns (uint256 requestId)
+    {
         // Will revert if subscription is not set and funded
-        s_requestId = COORDINATOR.requestRandomWords(
+        requestId = COORDINATOR.requestRandomWords(
             keyHash,
             s_subscriptionId,
-            minimumRequestConfirmations,
+            requestConfirmations,
             callbackGasLimit,
             numWords
         );
+
+        s_requests[requestId] = RequestStatus({
+            randomWords: new uint256[](0),
+            exists: true,
+            fulfilled: false
+        });
+
+        requestIds.push(requestId);
+
+        lastRequestId = requestId;
+
+        emit RequestSent(requestId, numWords);
+
+        return requestId;
     }
 
     function fulfillRandomWords(
-        uint256, /* requestId */
-        uint256[] memory randomWords
+        uint256 _requestId,
+        uint256[] memory _randomWords
     ) internal override {
-        s_randomWords = randomWords[0] % colors.length;
+        require(s_requests[_requestId].exists, "request not found");
 
-        makeAnEpicNFT();
+        s_requests[_requestId].fulfilled = true;
+
+        s_requests[_requestId].randomWords = _randomWords;
+
+        s_randomWords = _randomWords[0] % (colors.length - 1);
+
+        emit RequestFulfilled(_requestId, _randomWords);
     }
 
     // Gets user's NFT
     function makeAnEpicNFT() public {
         // Get the current tokenId, this starts at 0.
-        uint256 newItemId = _tokenIds.current();
+        newItemId = _tokenIds.current();
+
+        string memory name = colorNames[s_randomWords];
+
+        string memory image = colors[s_randomWords];
 
         string memory json = Base64.encode(
             bytes(
                 string(
                     abi.encodePacked(
                         '{"name": "',
-                        // We set the title of our NFT as the generated word.
-                        colorNames[s_randomWords],
-                        '", "description": "A highly acclaimed collection of squares.", "image": "data:image/svg+xml;base64,',
-                        // We add data:image/svg+xml;base64 and then append our base64 encode our svg.
-                        colors[s_randomWords],
+                        name,
+                        '", "description": "A highly acclaimed collection of squares.",',
+                        '"image": "',
+                        image,
                         '"}'
                     )
                 )
             )
         );
 
-        console.log("json: ", json);
-
-        string memory finalTokenUri = string(
+        string memory tokenUri = string(
             abi.encodePacked("data:application/json;base64,", json)
         );
 
         console.log("\n--------------------");
-        console.log(finalTokenUri);
+        console.log(tokenUri);
         console.log("--------------------\n");
 
         // Mint NFT to sender
         _safeMint(msg.sender, newItemId);
 
         // Sets NFT data
-        _setTokenURI(newItemId, finalTokenUri);
+        _setTokenURI(newItemId, tokenUri);
 
         // Increment counter for when the next NFT is minted
         _tokenIds.increment();
@@ -143,8 +185,27 @@ contract MyEpicNFT is ERC721URIStorage, VRFConsumerBaseV2 {
         );
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == s_owner);
-        _;
+    function getRequestStatus(uint256 _requestId)
+        external
+        view
+        returns (bool fulfilled, uint256[] memory randomWords)
+    {
+        require(s_requests[_requestId].exists, "request not found");
+
+        RequestStatus memory request = s_requests[_requestId];
+
+        return (request.fulfilled, request.randomWords);
+    }
+
+    function getItemId() public view returns (uint256) {
+        return newItemId;
+    }
+
+    function getItemName() public view returns (string memory) {
+        return colorNames[s_randomWords];
+    }
+
+    function getItemColor() public view returns (string memory) {
+        return colors[s_randomWords];
     }
 }

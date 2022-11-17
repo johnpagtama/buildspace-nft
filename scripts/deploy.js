@@ -3,18 +3,27 @@ const main = async () => {
 		'MyEpicNFT'
 	);
 
-	const nftContract = await nftContractFactory.deploy(10101);
+	const nftContract = await nftContractFactory.deploy(1349);
 
 	await nftContract.deployed();
 
 	console.log('✅ Contract deployed to: ', nftContract.address);
 
+	// Request random number
+	// const txn = await nftContract.requestRandomWords();
+
+	// console.log('✅ Requested random number');
+
+	// const data = await txn.wait();
+
+	// console.log('✅ Receved random number: ', data);
+
 	// Call mint function
-	let txn = await nftContract.makeAnEpicNFT();
+	// const mint = await nftContract.makeAnEpicNFT();
 
-	let data = await txn.wait();
+	// const nft = await mint.wait();
 
-	console.log('✅ Minted NFT #1', data);
+	// console.log('✅ Minted NFT #1', nft);
 };
 
 const runMain = async () => {
